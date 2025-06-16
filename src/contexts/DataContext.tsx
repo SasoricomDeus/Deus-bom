@@ -7,12 +7,15 @@ interface DataContextType {
   donations: Donation[];
   categories: Category[];
   ratings: Rating[];
-  refreshData: () => void;
-  addInstitution: (institution: Institution) => void;
-  updateInstitution: (institution: Institution) => void;
-  addDonation: (donation: Donation) => void;
-  updateDonation: (donation: Donation) => void;
-  addRating: (rating: Rating) => void;
+  refreshData: () => Promise<void>;
+  addInstitution: (institution: Institution) => Promise<void>;
+  updateInstitution: (institution: Institution) => Promise<void>;
+  addDonation: (donation: Donation) => Promise<void>;
+  updateDonation: (donation: Donation) => Promise<void>;
+  addRating: (rating: Rating) => Promise<void>;
+  addCategory: (category: Category) => Promise<void>;
+  updateCategory: (category: Category) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -39,35 +42,46 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshData();
   }, []);
 
-  const refreshData = () => {
-    setInstitutions(dataService.getInstitutions());
-    setDonations(dataService.getDonations());
-    setCategories(dataService.getCategories());
-    setRatings(dataService.getRatings());
+  const refreshData = async () => {
+    try {
+      const [institutionsData, donationsData, categoriesData, ratingsData] = await Promise.all([
+        dataService.getInstitutions(),
+        dataService.getDonations(),
+        dataService.getCategories(),
+        dataService.getRatings()
+      ]);
+
+      setInstitutions(institutionsData);
+      setDonations(donationsData);
+      setCategories(categoriesData);
+      setRatings(ratingsData);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
   };
 
-  const addInstitution = (institution: Institution) => {
-    dataService.saveInstitution(institution);
+  const addInstitution = async (institution: Institution) => {
+    await dataService.saveInstitution(institution);
     setInstitutions(prev => [...prev, institution]);
   };
 
-  const updateInstitution = (institution: Institution) => {
-    dataService.saveInstitution(institution);
+  const updateInstitution = async (institution: Institution) => {
+    await dataService.saveInstitution(institution);
     setInstitutions(prev => prev.map(inst => inst.id === institution.id ? institution : inst));
   };
 
-  const addDonation = (donation: Donation) => {
-    dataService.saveDonation(donation);
+  const addDonation = async (donation: Donation) => {
+    await dataService.saveDonation(donation);
     setDonations(prev => [...prev, donation]);
   };
 
-  const updateDonation = (donation: Donation) => {
-    dataService.saveDonation(donation);
+  const updateDonation = async (donation: Donation) => {
+    await dataService.saveDonation(donation);
     setDonations(prev => prev.map(don => don.id === donation.id ? donation : don));
   };
 
-  const addRating = (rating: Rating) => {
-    dataService.saveRating(rating);
+  const addRating = async (rating: Rating) => {
+    await dataService.saveRating(rating);
     setRatings(prev => [...prev, rating]);
     
     // Update institution rating
@@ -82,8 +96,23 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         totalRatings: institutionRatings.length
       };
       
-      updateInstitution(updatedInstitution);
+      await updateInstitution(updatedInstitution);
     }
+  };
+
+  const addCategory = async (category: Category) => {
+    await dataService.saveCategory(category);
+    setCategories(prev => [...prev, category]);
+  };
+
+  const updateCategory = async (category: Category) => {
+    await dataService.saveCategory(category);
+    setCategories(prev => prev.map(cat => cat.id === category.id ? category : cat));
+  };
+
+  const deleteCategory = async (categoryId: string) => {
+    await dataService.deleteCategory(categoryId);
+    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
   };
 
   const value = {
@@ -96,7 +125,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     updateInstitution,
     addDonation,
     updateDonation,
-    addRating
+    addRating,
+    addCategory,
+    updateCategory,
+    deleteCategory
   };
 
   return (

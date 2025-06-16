@@ -1,15 +1,14 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../types';
-import { fileService } from './fileService';
+import { fileSystemService } from './fileSystemService';
 
 class AuthService {
-  private readonly STORAGE_KEY = 'benigna_users';
   private readonly CURRENT_USER_KEY = 'benigna_current_user';
 
   async register(userData: Partial<User>): Promise<User | null> {
     try {
-      const users = this.getUsers();
+      const users = await fileSystemService.getAllUsers();
       
       // Check if email already exists
       if (users.find(user => user.email === userData.email)) {
@@ -42,8 +41,7 @@ class AuthService {
         updatedAt: new Date()
       };
 
-      users.push(newUser);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
+      await fileSystemService.saveUser(newUser);
       localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(newUser));
 
       return newUser;
@@ -55,7 +53,7 @@ class AuthService {
 
   async login(email: string, password: string): Promise<User | null> {
     try {
-      const users = this.getUsers();
+      const users = await fileSystemService.getAllUsers();
       const user = users.find(u => u.email === email);
 
       if (!user) {
@@ -89,46 +87,29 @@ class AuthService {
     localStorage.removeItem(this.CURRENT_USER_KEY);
   }
 
-  updateUser(user: User): void {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === user.id);
-    
-    if (userIndex !== -1) {
-      users[userIndex] = { ...user, updatedAt: new Date() };
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
-      localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(users[userIndex]));
-    }
-  }
-
-  private getUsers(): User[] {
-    try {
-      const usersJson = localStorage.getItem(this.STORAGE_KEY);
-      return usersJson ? JSON.parse(usersJson) : [];
-    } catch (error) {
-      console.error('Error getting users:', error);
-      return [];
-    }
+  async updateUser(user: User): Promise<void> {
+    const updatedUser = { ...user, updatedAt: new Date() };
+    await fileSystemService.saveUser(updatedUser);
+    localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(updatedUser));
   }
 
   // Initialize with sample data
-  initializeSampleData(): void {
-    const users = this.getUsers();
+  async initializeSampleData(): Promise<void> {
+    const users = await fileSystemService.getAllUsers();
     if (users.length === 0) {
       // Add sample admin user
-      const sampleUsers: User[] = [
-        {
-          id: uuidv4(),
-          name: 'Administrador',
-          email: 'admin@benigna.com',
-          password: bcrypt.hashSync('admin123', 10),
-          phone: '(11) 99999-9999',
-          type: 'admin',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ];
+      const sampleUser: User = {
+        id: uuidv4(),
+        name: 'Administrador',
+        email: 'admin@benigna.com',
+        password: bcrypt.hashSync('admin123', 10),
+        phone: '(11) 99999-9999',
+        type: 'admin',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sampleUsers));
+      await fileSystemService.saveUser(sampleUser);
     }
   }
 }

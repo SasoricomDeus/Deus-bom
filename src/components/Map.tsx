@@ -12,22 +12,34 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom icons
+// Custom icons with better visuals
 const userIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" width="32" height="32">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      <circle cx="12" cy="9" r="2" fill="white"/>
+    </svg>
+  `),
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
   shadowSize: [41, 41]
 });
 
 const institutionIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10B981" width="32" height="32">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+      <path d="M12 6c-1.1 0-2 .9-2 2v6h4V8c0-1.1-.9-2-2-2z" fill="white"/>
+      <rect x="10" y="10" width="4" height="1" fill="#10B981"/>
+      <rect x="10" y="12" width="4" height="1" fill="#10B981"/>
+    </svg>
+  `),
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
   shadowSize: [41, 41]
 });
 
@@ -109,7 +121,7 @@ export const Map: React.FC<MapProps> = ({
           >
             <Popup>
               <div className="text-center">
-                <strong>Sua localização</strong>
+                <strong>📍 Sua localização</strong>
                 {userLocation.address && (
                   <p className="text-sm text-gray-600 mt-1">
                     {userLocation.address}
@@ -132,11 +144,13 @@ export const Map: React.FC<MapProps> = ({
           >
             <Popup>
               <div className="min-w-[200px]">
-                <h3 className="font-semibold text-lg mb-2">{institution.name}</h3>
+                <h3 className="font-semibold text-lg mb-2 flex items-center">
+                  🏢 {institution.name}
+                </h3>
                 
                 <div className="space-y-2 text-sm">
                   <p className="text-gray-600">
-                    {institution.address.street}, {institution.address.number}
+                    📍 {institution.address.street}, {institution.address.number}
                   </p>
                   <p className="text-gray-600">
                     {institution.address.neighborhood}, {institution.address.city}
@@ -144,7 +158,7 @@ export const Map: React.FC<MapProps> = ({
                   
                   {userLocation && (
                     <p className="text-green-600 font-medium">
-                      📍 {getDistanceText(institution)} de distância
+                      🚶 {getDistanceText(institution)} de distância
                     </p>
                   )}
                   

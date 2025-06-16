@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 import { Header } from '../components/Header';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,13 +10,15 @@ import { Select } from '../components/ui/select';
 import { validationService } from '../services/validationService';
 import { addressService } from '../services/addressService';
 import { fileService } from '../services/fileService';
-import { FormField, WorkingHours } from '../types';
+import { FormField, WorkingHours, Institution } from '../types';
 import { Heart, User, Mail, Lock, Phone, MapPin, Building, Upload, Eye, EyeOff } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import InputMask from 'react-input-mask';
 import Swal from 'sweetalert2';
 
 export const Register: React.FC = () => {
   const { register } = useAuth();
+  const { addInstitution } = useData();
   const navigate = useNavigate();
   
   const [userType, setUserType] = useState<'donor' | 'institution'>('donor');
@@ -231,6 +234,7 @@ export const Register: React.FC = () => {
         userData.cnpj = formData.cnpj.value;
         userData.description = formData.description.value;
         userData.address = {
+          id: uuidv4(),
           street: formData.street.value,
           number: formData.number.value,
           complement: formData.complement.value,
@@ -249,6 +253,31 @@ export const Register: React.FC = () => {
       }
 
       const success = await register(userData);
+      
+      if (success && userType === 'institution') {
+        // Also add to institutions list for immediate map display
+        const institution: Institution = {
+          id: userData.id || uuidv4(),
+          name: userData.name,
+          email: userData.email,
+          password: userData.password,
+          phone: userData.phone,
+          cnpj: userData.cnpj,
+          type: 'institution',
+          description: userData.description,
+          address: userData.address,
+          workingHours: userData.workingHours,
+          acceptedCategories: userData.acceptedCategories,
+          rating: userData.rating,
+          totalRatings: userData.totalRatings,
+          verified: userData.verified,
+          profileImage: userData.profileImage,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await addInstitution(institution);
+      }
       
       if (success) {
         Swal.fire({

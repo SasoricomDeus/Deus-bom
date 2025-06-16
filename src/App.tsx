@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LocationProvider } from './contexts/LocationContext';
@@ -13,8 +13,24 @@ import { InstitutionProfile } from './pages/InstitutionProfile';
 import { ScheduleDelivery } from './pages/ScheduleDelivery';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { fileSystemService } from './services/fileSystemService';
+import { dataService } from './services/dataService';
+import { authService } from './services/authService';
+import { fileService } from './services/fileService';
 
 function App() {
+  useEffect(() => {
+    // Initialize file system and sample data
+    const initializeApp = async () => {
+      await fileSystemService.initializeDirectories();
+      await dataService.initializeSampleData();
+      await authService.initializeSampleData();
+      await fileService.initializeFolders();
+    };
+
+    initializeApp();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

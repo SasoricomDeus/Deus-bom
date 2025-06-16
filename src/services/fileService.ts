@@ -1,48 +1,12 @@
-class FileService {
-  private readonly BASE_PATH = 'benigna_files';
+import { fileSystemService } from './fileSystemService';
 
+class FileService {
   async saveImage(file: File, folder: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const result = e.target?.result as string;
-          const fileName = `${Date.now()}_${file.name}`;
-          const filePath = `${this.BASE_PATH}/${folder}/${fileName}`;
-          
-  
-          const fileData = {
-            name: fileName,
-            data: result,
-            type: file.type,
-            size: file.size,
-            createdAt: new Date().toISOString()
-          };
-          
-          localStorage.setItem(filePath, JSON.stringify(fileData));
-          resolve(filePath);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsDataURL(file);
-    });
+    return await fileSystemService.saveImage(file, folder);
   }
 
-  getImage(filePath: string): string | null {
-    try {
-      const fileDataJson = localStorage.getItem(filePath);
-      if (!fileDataJson) return null;
-      
-      const fileData = JSON.parse(fileDataJson);
-      return fileData.data;
-    } catch (error) {
-      console.error('Error getting image:', error);
-      return null;
-    }
+  async getImage(filePath: string): Promise<string | null> {
+    return await fileSystemService.getImage(filePath);
   }
 
   deleteImage(filePath: string): boolean {
@@ -55,20 +19,14 @@ class FileService {
     }
   }
 
-  // Create folder structure in localStorage
-  createFolder(folderPath: string): void {
-    const fullPath = `${this.BASE_PATH}/${folderPath}`;
-    localStorage.setItem(`${fullPath}/.folder`, JSON.stringify({ created: new Date().toISOString() }));
-  }
-
   // List files in folder
   listFiles(folder: string): string[] {
-    const prefix = `${this.BASE_PATH}/${folder}/`;
+    const prefix = `benigna_data/images/${folder}/`;
     const files: string[] = [];
     
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(prefix) && !key.endsWith('/.folder')) {
+      if (key && key.startsWith(prefix) && !key.endsWith('/.directory')) {
         files.push(key);
       }
     }
@@ -77,17 +35,8 @@ class FileService {
   }
 
   // Initialize folder structure
-  initializeFolders(): void {
-    const folders = [
-      'profiles',
-      'institutions',
-      'donations',
-      'temp'
-    ];
-    
-    folders.forEach(folder => {
-      this.createFolder(folder);
-    });
+  async initializeFolders(): Promise<void> {
+    await fileSystemService.initializeDirectories();
   }
 }
 

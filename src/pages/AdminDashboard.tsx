@@ -14,16 +14,19 @@ import {
   Plus,
   Edit,
   Trash2,
-  Settings
+  Settings,
+  Save,
+  X
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export const AdminDashboard: React.FC = () => {
-  const { institutions, donations, categories, ratings } = useData();
+  const { institutions, donations, categories, ratings, addCategory, updateCategory, deleteCategory } = useData();
   
   const [newCategory, setNewCategory] = useState({ name: '', icon: '' });
   const [newSubcategory, setNewSubcategory] = useState({ name: '', categoryId: '' });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<{ subcategory: Subcategory; categoryId: string } | null>(null);
 
   const stats = {
     totalInstitutions: institutions.length,
@@ -34,7 +37,7 @@ export const AdminDashboard: React.FC = () => {
     averageRating: ratings.length > 0 ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length : 0
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategory.name.trim() || !newCategory.icon.trim()) {
       Swal.fire({
         icon: 'warning',
@@ -49,25 +52,32 @@ export const AdminDashboard: React.FC = () => {
       id: uuidv4(),
       name: newCategory.name,
       icon: newCategory.icon,
-      subcategorias: []
+      subcategories: []
     };
 
-    // Here you would save the category using dataService
-    console.log('Adding category:', category);
-    
-    setNewCategory({ name: '', icon: '' });
-    
-    Swal.fire({
-      icon: 'success',
-      title: 'Categoria adicionada!',
-      text: 'A nova categoria foi criada com sucesso.',
-      confirmButtonColor: '#2E7D32',
-      timer: 2000,
-      showConfirmButton: false
-    });
+    try {
+      await addCategory(category);
+      setNewCategory({ name: '', icon: '' });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Categoria adicionada!',
+        text: 'A nova categoria foi criada com sucesso.',
+        confirmButtonColor: '#2E7D32',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível adicionar a categoria.',
+        confirmButtonColor: '#2E7D32'
+      });
+    }
   };
 
-  const handleAddSubcategory = () => {
+  const handleAddSubcategory = async () => {
     if (!newSubcategory.name.trim() || !newSubcategory.categoryId) {
       Swal.fire({
         icon: 'warning',
@@ -78,29 +88,106 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
 
+    const category = categories.find(cat => cat.id === newSubcategory.categoryId);
+    if (!category) return;
+
     const subcategory: Subcategory = {
       id: uuidv4(),
       name: newSubcategory.name,
       categoryId: newSubcategory.categoryId
     };
 
-    // Here you would save the subcategory using dataService
-    console.log('Adding subcategory:', subcategory);
-    
-    setNewSubcategory({ name: '', categoryId: '' });
-    
-    Swal.fire({
-      icon: 'success',
-      title: 'Subcategoria adicionada!',
-      text: 'A nova subcategoria foi criada com sucesso.',
-      confirmButtonColor: '#2E7D32',
-      timer: 2000,
-      showConfirmButton: false
-    });
+    const updatedCategory = {
+      ...category,
+      subcategories: [...category.subcategories, subcategory]
+    };
+
+    try {
+      await updateCategory(updatedCategory);
+      setNewSubcategory({ name: '', categoryId: '' });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Subcategoria adicionada!',
+        text: 'A nova subcategoria foi criada com sucesso.',
+        confirmButtonColor: '#2E7D32',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível adicionar a subcategoria.',
+        confirmButtonColor: '#2E7D32'
+      });
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
-    Swal.fire({
+  const handleEditCategory = async () => {
+    if (!editingCategory) return;
+
+    try {
+      await updateCategory(editingCategory);
+      setEditingCategory(null);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Categoria atualizada!',
+        text: 'As alterações foram salvas com sucesso.',
+        confirmButtonColor: '#2E7D32',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível atualizar a categoria.',
+        confirmButtonColor: '#2E7D32'
+      });
+    }
+  };
+
+  const handleEditSubcategory = async () => {
+    if (!editingSubcategory) return;
+
+    const category = categories.find(cat => cat.id === editingSubcategory.categoryId);
+    if (!category) return;
+
+    const updatedSubcategories = category.subcategories.map(sub => 
+      sub.id === editingSubcategory.subcategory.id ? editingSubcategory.subcategory : sub
+    );
+
+    const updatedCategory = {
+      ...category,
+      subcategories: updatedSubcategories
+    };
+
+    try {
+      await updateCategory(updatedCategory);
+      setEditingSubcategory(null);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Subcategoria atualizada!',
+        text: 'As alterações foram salvas com sucesso.',
+        confirmButtonColor: '#2E7D32',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível atualizar a subcategoria.',
+        confirmButtonColor: '#2E7D32'
+      });
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    const result = await Swal.fire({
       title: 'Tem certeza?',
       text: 'Esta ação não pode ser desfeita. Todas as subcategorias também serão removidas.',
       icon: 'warning',
@@ -109,10 +196,11 @@ export const AdminDashboard: React.FC = () => {
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Sim, excluir',
       cancelButtonText: 'Cancelar'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Here you would delete the category using dataService
-        console.log('Deleting category:', categoryId);
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteCategory(categoryId);
         
         Swal.fire({
           icon: 'success',
@@ -122,8 +210,59 @@ export const AdminDashboard: React.FC = () => {
           timer: 2000,
           showConfirmButton: false
         });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro',
+          text: 'Não foi possível excluir a categoria.',
+          confirmButtonColor: '#2E7D32'
+        });
       }
+    }
+  };
+
+  const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string) => {
+    const result = await Swal.fire({
+      title: 'Tem certeza?',
+      text: 'Esta ação não pode ser desfeita.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sim, excluir',
+      cancelButtonText: 'Cancelar'
     });
+
+    if (result.isConfirmed) {
+      const category = categories.find(cat => cat.id === categoryId);
+      if (!category) return;
+
+      const updatedSubcategories = category.subcategories.filter(sub => sub.id !== subcategoryId);
+      const updatedCategory = {
+        ...category,
+        subcategories: updatedSubcategories
+      };
+
+      try {
+        await updateCategory(updatedCategory);
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Subcategoria excluída!',
+          text: 'A subcategoria foi removida com sucesso.',
+          confirmButtonColor: '#2E7D32',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro',
+          text: 'Não foi possível excluir a subcategoria.',
+          confirmButtonColor: '#2E7D32'
+        });
+      }
+    }
   };
 
   return (
@@ -299,26 +438,60 @@ export const AdminDashboard: React.FC = () => {
               {categories.map((category) => (
                 <div key={category.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">
-                      {category.icon} {category.name}
-                    </h4>
-                    <div className="flex space-x-2">
-                      <Button
-                        onClick={() => setEditingCategory(category)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Edit size={14} />
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteCategory(category.id)}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    {editingCategory?.id === category.id ? (
+                      <div className="flex items-center space-x-2 flex-1">
+                        <Input
+                          type="text"
+                          value={editingCategory.icon}
+                          onChange={(e) => setEditingCategory(prev => prev ? { ...prev, icon: e.target.value } : null)}
+                          className="w-16"
+                          maxLength={2}
+                        />
+                        <Input
+                          type="text"
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={handleEditCategory}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Save size={14} />
+                        </Button>
+                        <Button
+                          onClick={() => setEditingCategory(null)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <h4 className="font-medium text-gray-900">
+                          {category.icon} {category.name}
+                        </h4>
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => setEditingCategory(category)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Edit size={14} />
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteCategory(category.id)}
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   {category.subcategories.length > 0 && (
@@ -327,14 +500,59 @@ export const AdminDashboard: React.FC = () => {
                       <div className="space-y-1">
                         {category.subcategories.map((sub) => (
                           <div key={sub.id} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-700">• {sub.name}</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 border-red-600 hover:bg-red-50 h-6 px-2"
-                            >
-                              <Trash2 size={12} />
-                            </Button>
+                            {editingSubcategory?.subcategory.id === sub.id ? (
+                              <div className="flex items-center space-x-2 flex-1">
+                                <span className="text-gray-700">•</span>
+                                <Input
+                                  type="text"
+                                  value={editingSubcategory.subcategory.name}
+                                  onChange={(e) => setEditingSubcategory(prev => 
+                                    prev ? { 
+                                      ...prev, 
+                                      subcategory: { ...prev.subcategory, name: e.target.value } 
+                                    } : null
+                                  )}
+                                  className="flex-1 h-8"
+                                />
+                                <Button
+                                  onClick={handleEditSubcategory}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white h-6 px-2"
+                                >
+                                  <Save size={12} />
+                                </Button>
+                                <Button
+                                  onClick={() => setEditingSubcategory(null)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2"
+                                >
+                                  <X size={12} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-gray-700">• {sub.name}</span>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    onClick={() => setEditingSubcategory({ subcategory: sub, categoryId: category.id })}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2"
+                                  >
+                                    <Edit size={12} />
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleDeleteSubcategory(category.id, sub.id)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 border-red-600 hover:bg-red-50 h-6 px-2"
+                                  >
+                                    <Trash2 size={12} />
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>

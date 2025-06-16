@@ -1,105 +1,59 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Institution, Donation, Category, Rating, Subcategory } from '../types';
+import { fileSystemService } from './fileSystemService';
 
 class DataService {
-  private readonly INSTITUTIONS_KEY = 'benigna_institutions';
-  private readonly DONATIONS_KEY = 'benigna_donations';
-  private readonly CATEGORIES_KEY = 'benigna_categories';
-  private readonly RATINGS_KEY = 'benigna_ratings';
-
   // Institutions
-  getInstitutions(): Institution[] {
-    try {
-      const data = localStorage.getItem(this.INSTITUTIONS_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error getting institutions:', error);
-      return [];
-    }
+  async getInstitutions(): Promise<Institution[]> {
+    return await fileSystemService.getAllInstitutions();
   }
 
-  saveInstitution(institution: Institution): void {
-    const institutions = this.getInstitutions();
-    const existingIndex = institutions.findIndex(inst => inst.id === institution.id);
-    
-    if (existingIndex !== -1) {
-      institutions[existingIndex] = institution;
-    } else {
-      institutions.push(institution);
-    }
-    
-    localStorage.setItem(this.INSTITUTIONS_KEY, JSON.stringify(institutions));
+  async saveInstitution(institution: Institution): Promise<void> {
+    await fileSystemService.saveInstitution(institution);
   }
 
-  getInstitutionById(id: string): Institution | null {
-    const institutions = this.getInstitutions();
-    return institutions.find(inst => inst.id === id) || null;
+  async getInstitutionById(id: string): Promise<Institution | null> {
+    return await fileSystemService.getInstitution(id);
   }
 
   // Donations
-  getDonations(): Donation[] {
-    try {
-      const data = localStorage.getItem(this.DONATIONS_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error getting donations:', error);
-      return [];
-    }
+  async getDonations(): Promise<Donation[]> {
+    return await fileSystemService.getAllDonations();
   }
 
-  saveDonation(donation: Donation): void {
-    const donations = this.getDonations();
-    const existingIndex = donations.findIndex(don => don.id === donation.id);
-    
-    if (existingIndex !== -1) {
-      donations[existingIndex] = donation;
-    } else {
-      donations.push(donation);
-    }
-    
-    localStorage.setItem(this.DONATIONS_KEY, JSON.stringify(donations));
+  async saveDonation(donation: Donation): Promise<void> {
+    await fileSystemService.saveDonation(donation);
   }
 
-  getDonationById(id: string): Donation | null {
-    const donations = this.getDonations();
-    return donations.find(don => don.id === id) || null;
+  async getDonationById(id: string): Promise<Donation | null> {
+    return await fileSystemService.getDonation(id);
   }
 
-  getDonationsByDonor(donorId: string): Donation[] {
-    const donations = this.getDonations();
+  async getDonationsByDonor(donorId: string): Promise<Donation[]> {
+    const donations = await this.getDonations();
     return donations.filter(don => don.donorId === donorId);
   }
 
-  getDonationsByInstitution(institutionId: string): Donation[] {
-    const donations = this.getDonations();
+  async getDonationsByInstitution(institutionId: string): Promise<Donation[]> {
+    const donations = await this.getDonations();
     return donations.filter(don => don.institutionId === institutionId);
   }
 
   // Categories
-  getCategories(): Category[] {
-    try {
-      const data = localStorage.getItem(this.CATEGORIES_KEY);
-      return data ? JSON.parse(data) : this.getDefaultCategories();
-    } catch (error) {
-      console.error('Error getting categories:', error);
-      return this.getDefaultCategories();
-    }
+  async getCategories(): Promise<Category[]> {
+    const categories = await fileSystemService.getAllCategories();
+    return categories.length > 0 ? categories : await this.getDefaultCategories();
   }
 
-  saveCategory(category: Category): void {
-    const categories = this.getCategories();
-    const existingIndex = categories.findIndex(cat => cat.id === category.id);
-    
-    if (existingIndex !== -1) {
-      categories[existingIndex] = category;
-    } else {
-      categories.push(category);
-    }
-    
-    localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(categories));
+  async saveCategory(category: Category): Promise<void> {
+    await fileSystemService.saveCategory(category);
   }
 
-  private getDefaultCategories(): Category[] {
+  async deleteCategory(id: string): Promise<void> {
+    await fileSystemService.deleteCategory(id);
+  }
+
+  private async getDefaultCategories(): Promise<Category[]> {
     const defaultCategories: Category[] = [
       {
         id: uuidv4(),
@@ -161,48 +115,37 @@ class DataService {
       });
     });
 
-    localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(defaultCategories));
+    // Save default categories
+    for (const category of defaultCategories) {
+      await this.saveCategory(category);
+    }
+
     return defaultCategories;
   }
 
   // Ratings
-  getRatings(): Rating[] {
-    try {
-      const data = localStorage.getItem(this.RATINGS_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error getting ratings:', error);
-      return [];
-    }
+  async getRatings(): Promise<Rating[]> {
+    return await fileSystemService.getAllRatings();
   }
 
-  saveRating(rating: Rating): void {
-    const ratings = this.getRatings();
-    const existingIndex = ratings.findIndex(rat => rat.id === rating.id);
-    
-    if (existingIndex !== -1) {
-      ratings[existingIndex] = rating;
-    } else {
-      ratings.push(rating);
-    }
-    
-    localStorage.setItem(this.RATINGS_KEY, JSON.stringify(ratings));
+  async saveRating(rating: Rating): Promise<void> {
+    await fileSystemService.saveRating(rating);
   }
 
-  getRatingsByInstitution(institutionId: string): Rating[] {
-    const ratings = this.getRatings();
+  async getRatingsByInstitution(institutionId: string): Promise<Rating[]> {
+    const ratings = await this.getRatings();
     return ratings.filter(rating => rating.institutionId === institutionId);
   }
 
   // Initialize sample data
-  initializeSampleData(): void {
-    const institutions = this.getInstitutions();
+  async initializeSampleData(): Promise<void> {
+    const institutions = await this.getInstitutions();
     if (institutions.length === 0) {
-      this.createSampleInstitutions();
+      await this.createSampleInstitutions();
     }
   }
 
-  private createSampleInstitutions(): void {
+  private async createSampleInstitutions(): Promise<void> {
     const sampleInstitutions: Institution[] = [
       {
         id: uuidv4(),
@@ -278,7 +221,9 @@ class DataService {
       }
     ];
 
-    localStorage.setItem(this.INSTITUTIONS_KEY, JSON.stringify(sampleInstitutions));
+    for (const institution of sampleInstitutions) {
+      await this.saveInstitution(institution);
+    }
   }
 }
 
